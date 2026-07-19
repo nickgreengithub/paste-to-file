@@ -352,12 +352,12 @@
                 <span class="stat-label">Rows</span>
               </div>
               <div class="stat">
-                <span id="statCols" class="stat-value">0</span>
+                <span id="statCols" class="stat-value">—</span>
                 <span class="stat-label">Columns</span>
               </div>
               <div class="stat">
                 <span id="statSize" class="stat-value">0 B</span>
-                <span class="stat-label">Size</span>
+                <span id="statSizeLabel" class="stat-label">Size</span>
               </div>
               <div class="stat">
                 <span id="statDelimiter" class="stat-value">—</span>
@@ -426,12 +426,21 @@
       const statRows = document.getElementById("statRows");
       const statCols = document.getElementById("statCols");
       const statSize = document.getElementById("statSize");
+      const statSizeLabel = document.getElementById("statSizeLabel");
       const statDelimiter = document.getElementById("statDelimiter");
 
       const formatSize = (bytes) => {
         if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      };
+
+      const byteSize = (value) => new TextEncoder().encode(value).length;
+
+      const delimiterChar = (delim) => {
+        if (delim === "tab") return "\t";
+        if (delim === "pipe") return "|";
+        return ",";
       };
 
       const detectDelimiter = (text) => {
@@ -449,17 +458,59 @@
         return "comma";
       };
 
-      const countColumns = (text) => {
-        if (!text) return 0;
+      const isCsvSuited = (text, delim) => {
+        if (!delim || !text.trim()) return false;
+        const lines = text.split(/\r\n|\n|\r/).filter((l) => l.trim().length > 0);
+        if (lines.length === 0) return false;
+
+        const d = delimiterChar(delim);
+        const counts = lines.map((line) => line.split(d).length);
+        const maxCols = Math.max(...counts);
+        if (maxCols < 2) return false;
+
+        const matching = counts.filter((count) => count === maxCols).length;
+        return matching / counts.length >= 0.8;
+      };
+
+      const escapeCsvField = (field) => {
+        if (/[",\r\n]/.test(field)) return `"${field.replace(/"/g, '""')}"`;
+        return field;
+      };
+
+      const csvByteSize = (text, delim) => {
+        const d = delimiterChar(delim);
         const lines = text.split(/\r\n|\n|\r/).filter((l) => l.length > 0);
-        if (lines.length === 0) return 0;
-        const sample = lines.slice(0, 20);
-        const commaHits = sample.reduce((n, l) => n + (l.match(/,/g) || []).length, 0);
-        const tabHits = sample.reduce((n, l) => n + (l.match(/\t/g) || []).length, 0);
-        const delimiter = tabHits > commaHits ? "\t" : commaHits > 0 ? "," : null;
-        if (!delimiter) return 1;
-        return lines.reduce((max, l) => {
-          const cols = l.split(delimiter).length;
+        const csv = lines
+          .map((line) => line.split(d).map(escapeCsvField).join(","))
+          .join("\n");
+        return byteSize(csv);
+      };
+
+      const hasMarkdownIndicators = (text) => {
+        if (!text.trim()) return false;
+        const lines = text.split(/\r\n|\n|\r/);
+        return lines.some((line) => /^\s*#/.test(line));
+      };
+
+      const detectSizeFormat = (text) => {
+        if (!text.trim()) {
+          return { label: "Size", bytes: 0 };
+        }
+        const delim = detectDelimiter(text);
+        if (isCsvSuited(text, delim)) {
+          return { label: "CSV-Size", bytes: csvByteSize(text, delim) };
+        }
+        if (hasMarkdownIndicators(text)) {
+          return { label: "MD-Size", bytes: byteSize(text) };
+        }
+        return { label: "TXT-Size", bytes: byteSize(text) };
+      };
+
+      const countCsvColumns = (text, delim) => {
+        const d = delimiterChar(delim);
+        const lines = text.split(/\r\n|\n|\r/).filter((l) => l.trim().length > 0);
+        return lines.reduce((max, line) => {
+          const cols = line.split(d).length;
           return cols > max ? cols : max;
         }, 0);
       };
@@ -470,16 +521,17 @@
         const words = trimmed ? trimmed.split(/\s+/).length : 0;
         const chars = text.length;
         const rows = text === "" ? 0 : text.split(/\r\n|\n|\r/).length;
-        const cols = countColumns(text);
         const delim = detectDelimiter(text);
-        const bytes = new TextEncoder().encode(text).length;
+        const csvSuited = isCsvSuited(text, delim);
+        const sizeFormat = detectSizeFormat(text);
 
         statWords.textContent = String(words);
         statChars.textContent = String(chars);
         statRows.textContent = String(rows);
-        statCols.textContent = String(cols);
-        statSize.textContent = formatSize(bytes);
-        statDelimiter.textContent = delim || "—";
+        statCols.textContent = csvSuited ? String(countCsvColumns(text, delim)) : "—";
+        statSize.textContent = formatSize(sizeFormat.bytes);
+        statSizeLabel.textContent = sizeFormat.label;
+        statDelimiter.textContent = csvSuited ? delim : "—";
       };
 
       const downloadFile = (extension, mimeType) => {
