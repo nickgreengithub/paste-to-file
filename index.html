@@ -107,6 +107,12 @@
         letter-spacing: 0.14em;
         text-transform: uppercase;
         color: var(--muted);
+        text-decoration: none;
+        transition: color 140ms ease;
+      }
+
+      .status:hover {
+        color: var(--cyan);
       }
 
       .status::before {
@@ -354,7 +360,7 @@
     <main class="shell">
       <header class="top">
         <h1 class="brand">paste-to-file</h1>
-        <div class="status">ready</div>
+        <a href="https://github.com/nickgreengithub/paste-to-file" target="_blank" class="status">github</a>
       </header>
 
       <section class="grid">
