@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>paste-to-file</title>
+
+    <style>
+      @font-face {
+        font-family: "Alliance No.1";
+        src: url("./assets/fonts/alliance-no1-regular.woff2") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Alliance No.1";
+        src: url("./assets/fonts/alliance-no1-light.woff2") format("woff2");
+        font-weight: 300;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Alliance No.2";
+        src: url("./assets/fonts/alliance-no2-light.woff2") format("woff2");
+        font-weight: 300;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      :root {
+        --bg: #05080d;
+        --panel: #070b12;
+        --input: #121a26;
+        --input-strong: #182233;
+        --line: rgba(34, 211, 238, 0.28);
+        --line-strong: rgba(34, 211, 238, 0.55);
+        --cyan: #22d3ee;
+        --cyan-soft: rgba(34, 211, 238, 0.12);
+        --text: #d7e6ef;
+        --muted: #5f7384;
+        --font-1: "Alliance No.1", sans-serif;
+        --font-2: "Alliance No.2", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      body {
+        color: var(--text);
+        font-family: var(--font-1);
+        background:
+          radial-gradient(900px 500px at 50% -20%, rgba(34, 211, 238, 0.07), transparent 60%),
+          var(--bg);
+      }
+
+      .shell {
+        height: 100%;
+        width: min(980px, 100%);
+        margin: 0 auto;
+        padding: 3.5rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 1rem;
+      }
+
+      @media (min-width: 640px) {
+        .shell {
+          padding: 4.5rem 1.5rem;
+        }
+      }
+
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 0.75rem;
+      }
+
+      .brand {
+        margin: 0;
+        font-family: var(--font-1);
+        font-weight: 400;
+        font-size: 1.15rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--cyan);
+        text-shadow: 0 0 18px rgba(34, 211, 238, 0.45);
+      }
+
+      .status {
+        font-family: var(--font-2);
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .status::before {
+        content: "";
+        display: inline-block;
+        width: 0.4rem;
+        height: 0.4rem;
+        margin-right: 0.45rem;
+        border-radius: 999px;
+        background: var(--cyan);
+        box-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+        vertical-align: middle;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.85rem;
+        height: min(420px, calc(100vh - 12rem));
+        min-height: 280px;
+      }
+
+      @media (max-width: 860px) {
+        .grid {
+          grid-template-columns: 1fr;
+          height: min(560px, calc(100vh - 12rem));
+        }
+      }
+
+      .panel {
+        position: relative;
+        min-height: 0;
+        height: 100%;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        box-shadow:
+          inset 0 0 0 1px rgba(34, 211, 238, 0.04),
+          0 0 24px rgba(34, 211, 238, 0.05);
+      }
+
+      .panel::before,
+      .panel::after {
+        content: "";
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-color: var(--cyan);
+        border-style: solid;
+        pointer-events: none;
+      }
+
+      .panel::before {
+        top: -1px;
+        left: -1px;
+        border-width: 1px 0 0 1px;
+        box-shadow: -2px -2px 10px rgba(34, 211, 238, 0.25);
+      }
+
+      .panel::after {
+        right: -1px;
+        bottom: -1px;
+        border-width: 0 1px 1px 0;
+        box-shadow: 2px 2px 10px rgba(34, 211, 238, 0.25);
+      }
+
+      .editor {
+        height: 100%;
+        background: var(--input);
+      }
+
+      #contentInput {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        resize: none;
+        border: 0;
+        outline: none;
+        background: var(--input);
+        color: var(--text);
+        font-family: var(--font-1);
+        font-weight: 300;
+        font-size: 1rem;
+        line-height: 1.65;
+        padding: 1.1rem 1.15rem;
+      }
+
+      #contentInput::placeholder {
+        color: var(--muted);
+        font-family: var(--font-2);
+      }
+
+      .editor:focus-within {
+        border-color: var(--line-strong);
+        box-shadow:
+          inset 0 0 0 1px rgba(34, 211, 238, 0.08),
+          0 0 28px rgba(34, 211, 238, 0.12);
+      }
+
+      .rail {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+        min-height: 0;
+        height: 100%;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+      }
+
+      .rail::before,
+      .rail::after {
+        display: none;
+      }
+
+      .contents,
+      .filename {
+        padding: 0.85rem;
+      }
+
+      .contents {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .filename {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+        height: auto;
+      }
+
+      .label {
+        margin: 0 0 0.45rem;
+        font-family: var(--font-2);
+        font-size: 0.68rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr 1fr;
+        gap: 0.5rem;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .stat {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.15rem;
+        border: 1px solid rgba(34, 211, 238, 0.16);
+        background: rgba(2, 8, 14, 0.6);
+        padding: 0.5rem 0.6rem;
+      }
+
+      .stat-value {
+        font-family: var(--font-1);
+        font-size: 1.15rem;
+        color: var(--cyan);
+        text-shadow: 0 0 12px rgba(34, 211, 238, 0.35);
+        line-height: 1.1;
+      }
+
+      .stat-label {
+        font-family: var(--font-2);
+        font-size: 0.62rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      #filenameInput {
+        width: 100%;
+        height: 2.75rem;
+        border: 1px solid var(--line);
+        background: var(--input-strong);
+        color: var(--text);
+        font-family: var(--font-2);
+        font-weight: 300;
+        font-size: 0.9rem;
+        padding: 0 0.8rem;
+        outline: none;
+        transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+      }
+
+      #filenameInput:focus {
+        border-color: var(--line-strong);
+        background: #1d2a3d;
+        box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.2), 0 0 16px rgba(34, 211, 238, 0.15);
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 0.55rem;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        height: 2.75rem;
+        width: 100%;
+        border: 1px solid var(--line-strong);
+        background: var(--cyan-soft);
+        color: var(--cyan);
+        font-family: var(--font-1);
+        font-size: 0.9rem;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        box-shadow: 0 0 16px rgba(34, 211, 238, 0.12);
+        transition: background-color 140ms ease, box-shadow 140ms ease, color 140ms ease;
+      }
+
+      .btn svg {
+        width: 0.95rem;
+        height: 0.95rem;
+      }
+
+      .btn:hover {
+        background: rgba(34, 211, 238, 0.2);
+        box-shadow: 0 0 22px rgba(34, 211, 238, 0.28);
+        color: #a5f3fc;
+      }
+
+      .btn:active {
+        background: rgba(34, 211, 238, 0.28);
+      }
+
+      .btn:focus-visible {
+        outline: 1px solid var(--cyan);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="top">
+        <h1 class="brand">paste-to-file</h1>
+        <div class="status">ready</div>
+      </header>
+
+      <section class="grid">
+        <div class="panel editor">
+          <textarea
+            id="contentInput"
+            placeholder="Paste your content here..."
+            spellcheck="false"
+          ></textarea>
+        </div>
+
+        <aside class="rail">
+          <div class="panel contents">
+            <p class="label">Contents</p>
+            <div class="stats">
+              <div class="stat">
+                <span id="statWords" class="stat-value">0</span>
+                <span class="stat-label">Words</span>
+              </div>
+              <div class="stat">
+                <span id="statChars" class="stat-value">0</span>
+                <span class="stat-label">Characters</span>
+              </div>
+              <div class="stat">
+                <span id="statRows" class="stat-value">0</span>
+                <span class="stat-label">Rows</span>
+              </div>
+              <div class="stat">
+                <span id="statLines" class="stat-value">0</span>
+                <span class="stat-label">Lines</span>
+              </div>
+              <div class="stat">
+                <span id="statCols" class="stat-value">0</span>
+                <span class="stat-label">Columns</span>
+              </div>
+              <div class="stat">
+                <span id="statDelimiter" class="stat-value">—</span>
+                <span class="stat-label">Delimiter</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel filename">
+            <div>
+              <p class="label">Filename</p>
+              <input
+                id="filenameInput"
+                type="text"
+                value="my_converted_file"
+                placeholder="filename"
+                aria-label="Filename"
+              />
+            </div>
+
+            <div class="actions">
+              <button id="downloadCsv" class="btn" type="button" aria-label="Download CSV file" title="Download CSV">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M12 3v12"></path>
+                  <path d="m7 10 5 5 5-5"></path>
+                  <path d="M5 20h14"></path>
+                </svg>
+                .csv
+              </button>
+
+              <button id="downloadMd" class="btn" type="button" aria-label="Download Markdown file" title="Download Markdown">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M12 3v12"></path>
+                  <path d="m7 10 5 5 5-5"></path>
+                  <path d="M5 20h14"></path>
+                </svg>
+                .md
+              </button>
+
+              <button id="downloadTxt" class="btn" type="button" aria-label="Download TXT file" title="Download TXT">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M12 3v12"></path>
+                  <path d="m7 10 5 5 5-5"></path>
+                  <path d="M5 20h14"></path>
+                </svg>
+                .txt
+              </button>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script>
+      const contentInput = document.getElementById("contentInput");
+      const filenameInput = document.getElementById("filenameInput");
+      const downloadCsv = document.getElementById("downloadCsv");
+      const downloadMd = document.getElementById("downloadMd");
+      const downloadTxt = document.getElementById("downloadTxt");
+      const statWords = document.getElementById("statWords");
+      const statChars = document.getElementById("statChars");
+      const statRows = document.getElementById("statRows");
+      const statLines = document.getElementById("statLines");
+      const statCols = document.getElementById("statCols");
+      const statDelimiter = document.getElementById("statDelimiter");
+
+      const detectDelimiter = (text) => {
+        if (!text) return null;
+        const lines = text.split(/\r\n|\n|\r/).filter((l) => l.length > 0);
+        if (lines.length === 0) return null;
+        const sample = lines.slice(0, 20);
+        const commaHits = sample.reduce((n, l) => n + (l.match(/,/g) || []).length, 0);
+        const tabHits = sample.reduce((n, l) => n + (l.match(/\t/g) || []).length, 0);
+        const pipeHits = sample.reduce((n, l) => n + (l.match(/\|/g) || []).length, 0);
+        const max = Math.max(commaHits, tabHits, pipeHits);
+        if (max === 0) return null;
+        if (tabHits === max) return "tab";
+        if (pipeHits === max) return "pipe";
+        return "comma";
+      };
+
+      const countColumns = (text) => {
+        if (!text) return 0;
+        const lines = text.split(/\r\n|\n|\r/).filter((l) => l.length > 0);
+        if (lines.length === 0) return 0;
+        const sample = lines.slice(0, 20);
+        const commaHits = sample.reduce((n, l) => n + (l.match(/,/g) || []).length, 0);
+        const tabHits = sample.reduce((n, l) => n + (l.match(/\t/g) || []).length, 0);
+        const delimiter = tabHits > commaHits ? "\t" : commaHits > 0 ? "," : null;
+        if (!delimiter) return 1;
+        return lines.reduce((max, l) => {
+          const cols = l.split(delimiter).length;
+          return cols > max ? cols : max;
+        }, 0);
+      };
+
+      const updateStats = () => {
+        const text = contentInput.value ?? "";
+        const trimmed = text.trim();
+        const words = trimmed ? trimmed.split(/\s+/).length : 0;
+        const chars = text.length;
+        const rows = text === "" ? 0 : text.split(/\r\n|\n|\r/).length;
+        const lines = text === "" ? 0 : text.split(/\r\n|\n|\r/).filter((l) => l.trim().length > 0).length;
+        const cols = countColumns(text);
+        const delim = detectDelimiter(text);
+
+        statWords.textContent = String(words);
+        statChars.textContent = String(chars);
+        statRows.textContent = String(rows);
+        statLines.textContent = String(lines);
+        statCols.textContent = String(cols);
+        statDelimiter.textContent = delim || "—";
+      };
+
+      const downloadFile = (extension, mimeType) => {
+        const text = contentInput.value ?? "";
+        const blob = new Blob([text], { type: `${mimeType};charset=utf-8` });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const baseName = (filenameInput.value || "my_converted_file").trim();
+        const safeName = baseName.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_");
+
+        link.href = url;
+        link.download = `${safeName || "my_converted_file"}.${extension}`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      };
+
+      contentInput.addEventListener("input", updateStats);
+      updateStats();
+
+      downloadCsv.addEventListener("click", () => {
+        downloadFile("csv", "text/csv");
+      });
+
+      downloadMd.addEventListener("click", () => {
+        downloadFile("md", "text/markdown");
+      });
+
+      downloadTxt.addEventListener("click", () => {
+        downloadFile("txt", "text/plain");
+      });
+    </script>
+  </body>
+</html>
