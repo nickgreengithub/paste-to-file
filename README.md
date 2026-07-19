@@ -1,5 +1,5 @@
 # paste-to-file
 
 Paste something. Name it. Download it.
+.csv, .md, .txt. 
 
-No accounts. No servers. Just a box and a button.
